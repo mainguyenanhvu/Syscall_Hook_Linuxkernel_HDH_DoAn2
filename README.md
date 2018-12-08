@@ -13,8 +13,50 @@ Nguyễn Khắc Đức	1612845
 ### Hệ điều hành và Ngôn ngữ được dùng
 - Module tạo trên hệ điều hành **Ubuntu 16.04 LTS**, phiên bản **Linux 4.4.0**.
 - File syscall, file module và test module được viết bằng C với thư viện hỗ trợ (kernel) linux.
-### Cách thực hiện 
-* Mở terminal
+### Cách thực hiện
+#### Viết syscall và nạp vào kernel
+- Mở terminal
+- Ta tải linux kernel phù hợp với kernel đang chạy trên máy. Vì chúng tôi dùng kernel 4.4.0-31-generic nên sẽ tải linux kernel 4.4.0 (theo https://packages.ubuntu.com/xenial/linux-source-4.4.0). Để biết được hệ điều hành có phiên bản kernel nào, ta gõ lệnh uname -r. 
+-	Sau khi tải xong, ta sẽ giải nén vào thư mục /usr/src/ bằng lệnh  tar -xvf linux-4.4.0.orig.tar.gz -C /usr/src/linux-4.4
+-	Ta chuyển đường dẫn hiện tại ở terminal vào /usr/src/linux-4.4 bằng lệnh cd /usr/src/linux-4.4. Ta tạo 1 thư mục pname bằng lệnh mkdir pname
+-	Ta cd vào pname (cd pname). Rồi tạo file pname.c bằng lệnh gedit pname.c. Ta chép đoạn lệnh thuộc syscall pnametoid vào file này. 
+-	Ta tạo thêm 1 file pname.h, tương tự như cách tạo file pname.c
+-	Ta cần tạo 1 file Makefile để chỉ thị biên dịch, tương tự như cách tạo file pname.c. 
+- Sau đó, quay trở ra thư mục cha /usr/src/linux-4.4 thay đổi file Makefile như sau:
+
+          o Ta dùng lệnh cat -n Makefile | grep -i core-y để xem giá trị ở dòng bắt đầu core-y.
+          o Ta sẽ thêm pname/ vào sau cùng dòng 882 thông qua lệnh nano +882 Makefile. Đối với từng kernel khác nhau số thứ tự dòng có thể khác nhau.
+-	Bước kế, ta sẽ thêm syscall pname vừa mới viết vào syscall table. Trước tiên ta phải tìm ra đường dẫn chứa file syscall_64.tbl. Theo bài làm của nhóm, đường dẫn là /usr/src/linux-4.4/arch/x86/entry/syscalls/syscall_64.tbl. Ta tiến hành thêm bằng cách dùng lệnh nano /usr/src/linux-4.4/arch/x86/entry/syscalls/syscall_64.tbl, thêm dòng sau vào: 326     common  pname                   pnametoid. Tùy vào kernel mà sẽ thêm số đầu tiên khác các số còn lại.
+-	Sau đó, ta tiến hành biên dịch kernel.
+
+          o Lệnh make menuconfig: chọn mũi tên sang trái (→) vào ô save rồi nhấn enter. Sau đó thoát (exit).
+          o Nếu máy ảo có 2 nhân thì chạy lệnh make -j2 (để tăng tốc quá trình biên dịch, ta cũng tùy vào số lượng nhân mà chọn số sau j) hoặc không thì chỉ cần chạy make.
+          o	Sau đó, chạy lệnh make install
+          o	Tiếp đến, chạy lện make modules_install install.
+-	Cuối cùng reboot.
+-	Ngoài ra, nếu trong quá trình reboot, bạn cần giữ shift để vào chỉnh kernel sẽ được chạy.
+-	Ta chọn Advanced options for Ubuntu. Rồi chọn Ubuntu, With Linux 4.4.0
+-	Kiểm tra xem có chạy kernel thành công hay không, ta vào terminal và gõ uname -a, kiểm tra ngày tháng năm tạo của kernel.
+-	Kiểm tra syscall có chạy hay không bằng cách tạo ra file testPname.c, biên dịch rồi chạy thử.
+         
+         o	Tạo file testPname.c bằng lệnh gedit testPname.c trong thư mục pname. 
+         o	Biên dịch bằng lệnh gcc testPname.c -o testPname
+         o	Rồi chạy bằng lệnh ./testPname
+-	Đối với syscall pidtopname, ta làm tương tự các bước trên. Để test ta tạo ra file testPname1.c
+
+#### Hook syscall
+Để viết module dùng cho việc hook, ta cần phải đi xác định địa chỉ của sys_call_table bằng cách gọi lệnh: cat /boot/System.map-$(uname -r) | grep sys_call_table
+-	Tạo 1 file tên Hook ở thư mục gốc (root). Rồi cd vào thư mục Hook.
+-	Ta sẽ tạo file captainHook.c.
+-	Sau đó tạo file Makefile.
+-	Rồi chạy make.
+-	Nạp module vào kernel bằng lệnh insmod: insmod captainHook.ko
+-	Cd ra thư mục cha:  cd ..
+-	Chạy ./open Desktop/ttt.txt với file open.c 
+-	Rồi tháo module khỏi kernel bằng lệnh rrmod: rrmod captainHook
+-	Ta mở 1 terminal khác lên. Chạy dmesg -wH để kiểm tra.
+
+##### Lưu ý: Mã nguồn của các file trên được đính kèm trong file tổng hợp báo cáo.
 ### Giấy phép
 Theo GPL.
 ### Nguồn tham khảo
